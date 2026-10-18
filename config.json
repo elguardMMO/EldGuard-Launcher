@@ -5,6 +5,6 @@
   "forge": "1.20.1-47.3.0",
   "memory": { "min": "2G", "max": "4G" },
   "links": { "discord": "https://discord.gg/ye7p9rHaff" },
-  "manifestUrl": "https://github.com/elguardMMO/EldGuard-Launcher/releases/latest/download/manifest.json",
+  "gateUrl": "https://eldguard-gate.eldguard-cb5.workers.dev",
   "localManifest": "manifest.local.json"
 }

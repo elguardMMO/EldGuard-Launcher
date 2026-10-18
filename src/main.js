@@ -10,7 +10,7 @@ const appDir = path.join(__dirname, '..');
 const cfg = JSON.parse(fs.readFileSync(path.join(appDir, 'config.json'), 'utf8').replace(/^\uFEFF/, ''));
 // config.local.json (jamais versionné) : adresse du serveur pendant les essais. En production, l'adresse vient de la liste hébergée (manifest.server).
 try { Object.assign(cfg, JSON.parse(fs.readFileSync(path.join(appDir, 'config.local.json'), 'utf8').replace(/^\uFEFF/, ''))); } catch { /* absent : normal */ }
-const root = path.join(app.getPath('userData'), 'EldGuard');
+const root = process.env.ELD_ROOT || path.join(app.getPath('userData'), 'EldGuard');   // ELD_ROOT : dossier d'installation alternatif (essais sur un autre disque)
 const sessionFile = path.join(root, 'session.bin');
 const settingsFile = path.join(root, 'settings.json');
 let win = null;
@@ -66,14 +66,25 @@ function pingServer(host, port, timeout = 4000) {
 
 ipcMain.handle('state', async () => {
   const s = loadSession();
-  const base = { config: { name: cfg.name, minecraft: cfg.minecraft, version: app.getVersion(), discord: !!(cfg.links && cfg.links.discord) }, settings: readSettings() };
+  const base = { config: { name: cfg.name, minecraft: cfg.minecraft, version: app.getVersion(), discord: !!(cfg.links && cfg.links.discord) }, settings: { ram: readSettings().ram } };
   return s ? Object.assign(base, { loggedIn: true, name: s.name, uuid: s.uuid }) : Object.assign(base, { loggedIn: false });
 });
 
+/** Jeton Minecraft valide (renouvelé au besoin), ou null si le joueur n'est pas connecté. */
+async function validMc() {
+  if (session && session.mc && session.mc.expires > Date.now() + 60000) return session.mc;
+  const s = session || loadSession();
+  return s ? mcFromRefresh(s.refresh_token) : null;
+}
+
+let knownServer = null;       // adresse reçue du service, gardée en mémoire et dans settings.json (jamais envoyée à l'interface)
+
 ipcMain.handle('status', async () => {
   try {
-    const srv = cfg.server || (await game.readManifest(cfg, appDir)).server;
+    let srv = cfg.server || knownServer || readSettings().server;
+    if (!srv && cfg.gateUrl) { const mc = await validMc(); if (mc) srv = (await game.readManifest(cfg, appDir, mc.access_token)).server; }
     if (!srv || !srv.host) return { known: false };
+    knownServer = srv;
     const r = await pingServer(srv.host, Number(srv.port) || 25565);
     return r ? { known: true, up: true, online: r.online, max: r.max } : { known: true, up: false };
   } catch { return { known: false }; }
@@ -91,28 +102,40 @@ ipcMain.handle('login', async () => {
 });
 
 ipcMain.handle('logout', async () => { session = null; fs.rmSync(sessionFile, { force: true }); return true; });
-ipcMain.handle('set-ram', async (_e, ram) => { if (/^([2-9]|1[0-6])G$/.test(ram)) writeSettings(Object.assign(readSettings(), { ram })); return readSettings(); });
+ipcMain.handle('set-ram', async (_e, ram) => { if (/^([2-9]|1[0-6])G$/.test(ram)) writeSettings(Object.assign(readSettings(), { ram })); return { ram: readSettings().ram }; });
 ipcMain.handle('link', async (_e, which) => { const u = cfg.links && cfg.links[which]; if (u && /^https:\/\//.test(u)) shell.openExternal(u); return !!u; });
 ipcMain.handle('open-folder', async () => { fs.mkdirSync(root, { recursive: true }); shell.openPath(root); });
 ipcMain.handle('win', async (_e, act) => { if (!win) return; if (act === 'min') win.minimize(); else if (act === 'close') win.close(); });
 
 ipcMain.handle('play', async () => {
   try {
-    let mc = session && session.mc && session.mc.expires > Date.now() + 60000 ? session.mc : null;
-    if (!mc) {
-      const s = session || loadSession();
-      if (!s) throw new Error('Connecte-toi d’abord avec ton compte Microsoft.');
-      mc = await mcFromRefresh(s.refresh_token);
-    }
+    const mc = await validMc();
+    if (!mc) throw new Error('Connecte-toi d’abord avec ton compte Microsoft.');
     const ram = readSettings().ram;
-    await game.launch({ cfg: Object.assign({}, cfg, { memory: { min: '2G', max: ram } }), appDir, root, auth: mc, emit: (ch, d) => send('game:' + ch, d) });
+    await game.launch({
+      cfg: Object.assign({}, cfg, { memory: { min: '2G', max: ram } }), appDir, root, auth: mc, emit: (ch, d) => send('game:' + ch, d),
+      onServer: srv => { knownServer = srv; writeSettings(Object.assign(readSettings(), { server: srv })); }
+    });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
   }
 });
 
+/** Mise à jour du lanceur lui-même (version installée, publications du dépôt public) : téléchargée en arrière-plan, installée à la fermeture. */
+function checkLauncherUpdate() {
+  if (!app.isPackaged) return;
+  try {
+    const { autoUpdater } = require('electron-updater');
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('update-downloaded', i => send('game:log', `Mise à jour du lanceur (${i.version}) prête : elle s'installera à la fermeture.`));
+    autoUpdater.on('error', () => { /* hors ligne ou aucune publication : sans importance */ });
+    autoUpdater.checkForUpdates().catch(() => {});
+  } catch { /* module absent : on ignore */ }
+}
+
 app.whenReady().then(() => {
+  checkLauncherUpdate();
   win = new BrowserWindow({
     width: 1100, height: 680, resizable: false, frame: false, backgroundColor: '#0a0c1c', title: `${cfg.name} Launcher`,
     icon: path.join(appDir, 'assets', 'emblem.png'),

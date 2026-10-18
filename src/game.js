@@ -70,12 +70,18 @@ async function ensureForge(root, cfg, log, progress) {
   return file;
 }
 
-/** Lit la liste des fichiers du serveur : adresse web (hébergement Minestrator) ou fichier local pendant les essais. */
-async function readManifest(cfg, appDir) {
-  if (cfg.manifestUrl) {
-    const r = await fetch(cfg.manifestUrl, { cache: 'no-store' });
-    if (!r.ok) throw new Error(`Liste des mises à jour inaccessible (${r.status}).`);
-    return r.json();
+/**
+ * Lit la liste des fichiers du serveur. En production, c'est le service EldGuard Gate (cfg.gateUrl) qui la donne, après avoir vérifié
+ * le compte Minecraft (jeton mcToken) : il renvoie aussi l'adresse du serveur et des liens de téléchargement temporaires.
+ * Pendant les essais : fichier local (cfg.localManifest).
+ */
+async function readManifest(cfg, appDir, mcToken) {
+  if (cfg.gateUrl) {
+    if (!mcToken) throw new Error('Connecte-toi avec ton compte Microsoft pour récupérer les fichiers.');
+    const r = await fetch(`${cfg.gateUrl.replace(/\/$/, '')}/manifest`, { method: 'POST', headers: { Authorization: `Bearer ${mcToken}` }, cache: 'no-store' });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error || `Liste des mises à jour inaccessible (${r.status}).`);
+    return body;
   }
   const local = path.join(appDir, cfg.localManifest);
   if (fs.existsSync(local)) return JSON.parse(fs.readFileSync(local, 'utf8'));
@@ -105,7 +111,7 @@ async function syncFiles(manifest, gameDir, log, progress) {
   }
 }
 
-async function launch({ cfg, appDir, root, auth, emit }) {
+async function launch({ cfg, appDir, root, auth, emit, onServer }) {
   const gameDir = path.join(root, 'game');
   fs.mkdirSync(gameDir, { recursive: true });
   const log = m => emit('log', m);
@@ -113,7 +119,8 @@ async function launch({ cfg, appDir, root, auth, emit }) {
   const java = await ensureJava(root, log, prog);
   const forge = await ensureForge(root, cfg, log, prog);
   log('Recherche des mises à jour…');
-  const manifest = await readManifest(cfg, appDir);
+  const manifest = await readManifest(cfg, appDir, auth.access_token);
+  if (onServer && manifest.server) onServer(manifest.server);
   await syncFiles(manifest, gameDir, log, prog);
   log(`Version des fichiers : ${manifest.version}`);
 
