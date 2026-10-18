@@ -32,13 +32,17 @@ async function pollStatus() {
 }
 setInterval(pollStatus, 30000);
 
-$('btnLogin').addEventListener('click', async () => {
+async function login(mode) {
   fail('');
-  $('btnLogin').disabled = true;
-  try { await window.eld.login(); show('deviceBox', false); } catch (e) { fail(clean(e.message)); }
-  $('btnLogin').disabled = false;
+  $('btnLogin').disabled = true; $('btnCode').disabled = true;
+  if (mode === 'browser') $('btnLogin').textContent = 'EN ATTENTE DE MICROSOFT…';
+  try { await window.eld.login(mode); show('deviceBox', false); } catch (e) { fail(clean(e.message)); }
+  $('btnLogin').textContent = 'SE CONNECTER AVEC MICROSOFT';
+  $('btnLogin').disabled = false; $('btnCode').disabled = false;
   refresh();
-});
+}
+$('btnLogin').addEventListener('click', () => login('browser'));
+$('btnCode').addEventListener('click', () => login('code'));
 $('btnLogout').addEventListener('click', async () => { await window.eld.logout(); refresh(); });
 $('btnFolder').addEventListener('click', () => window.eld.openFolder());
 $('btnDiscord').addEventListener('click', () => window.eld.link('discord'));

@@ -1,7 +1,7 @@
 {
   "name": "eldguard-launcher",
   "productName": "EldGuard Launcher",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lanceur du serveur EldGuard (Minecraft 1.20.1, Forge) : connexion Microsoft, installation et mises à jour automatiques.",
   "main": "src/main.js",
   "author": "EldGuard",

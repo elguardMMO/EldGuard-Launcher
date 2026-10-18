@@ -90,11 +90,17 @@ ipcMain.handle('status', async () => {
   } catch { return { known: false }; }
 });
 
-ipcMain.handle('login', async () => {
-  const dc = await auth.startDeviceCode(cfg.microsoftClientId);
-  send('device', { code: dc.user_code, url: dc.verification_uri, expires: dc.expires_in });
-  shell.openExternal(dc.verification_uri);
-  const ms = await auth.waitDeviceCode(cfg.microsoftClientId, dc);
+ipcMain.handle('login', async (_e, mode) => {
+  let ms;
+  if (mode === 'code') {                                  // secours : code à saisir sur microsoft.com/link
+    const dc = await auth.startDeviceCode(cfg.microsoftClientId);
+    send('device', { code: dc.user_code, url: dc.verification_uri, expires: dc.expires_in });
+    shell.openExternal(dc.verification_uri);
+    ms = await auth.waitDeviceCode(cfg.microsoftClientId, dc);
+  } else {                                                // normal : page de connexion Microsoft dans le navigateur
+    ms = await auth.browserLogin(cfg.microsoftClientId, u => { if (/^https:\/\/login\.microsoftonline\.com\//.test(u)) shell.openExternal(u); });
+    win.show(); win.focus();
+  }
   const mc = await auth.minecraftFromMicrosoft(ms.access_token);
   session = { refresh_token: ms.refresh_token, name: mc.name, uuid: mc.uuid, mc };
   saveSession();

@@ -44,6 +44,49 @@ async function waitDeviceCode(clientId, dc, onTick) {
   throw new Error('Le code a expiré. Clique de nouveau sur « Se connecter ».');
 }
 
+/**
+ * Connexion par navigateur (comme le lanceur officiel) : la page de connexion Microsoft s'ouvre, le joueur y saisit son compte, puis Microsoft
+ * le renvoie vers « http://localhost:<port> » où le lanceur attend le code (PKCE, sans secret). Il faut que « http://localhost » soit déclaré
+ * dans l'application Azure (Authentification > Applications mobiles et de bureau). Le mot de passe n'est jamais vu par le lanceur.
+ */
+async function browserLogin(clientId, openUrl, timeoutMs = 180000) {
+  const crypto = require('crypto');
+  const http = require('http');
+  const b64 = b => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const verifier = b64(crypto.randomBytes(48));
+  const challenge = b64(crypto.createHash('sha256').update(verifier).digest());
+  const state = b64(crypto.randomBytes(16));
+  const page = (title, msg) => `<!doctype html><meta charset="utf-8"><title>EldGuard</title><body style="margin:0;height:100vh;display:grid;place-items:center;background:#0a0c1c;color:#e8e2c8;font-family:Segoe UI,sans-serif;text-align:center"><div><h1 style="color:#ffc857;letter-spacing:6px">${title}</h1><p>${msg}</p></div>`;
+
+  let server;
+  const codePromise = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Pas de réponse de Microsoft. Si la page a affiché une erreur, utilise « Connexion avec un code » sous le bouton.")), timeoutMs);
+    server = http.createServer((req, res) => {
+      const u = new URL(req.url, 'http://localhost');
+      if (!u.searchParams.has('code') && !u.searchParams.has('error')) { res.writeHead(404).end(); return; }   // favicon, etc.
+      const err = u.searchParams.get('error');
+      const ok = !err && u.searchParams.get('state') === state;
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(ok ? page('CONNEXION RÉUSSIE', 'Tu peux fermer cet onglet et revenir au lanceur EldGuard.') : page('CONNEXION REFUSÉE', 'Retourne dans le lanceur et réessaie.'));
+      clearTimeout(timer);
+      if (err) reject(new Error(`Connexion Microsoft refusée : ${u.searchParams.get('error_description') || err}`));
+      else if (!ok) reject(new Error('Réponse Microsoft invalide (état différent).'));
+      else resolve(u.searchParams.get('code'));
+    });
+    server.on('error', reject);
+  });
+  await new Promise((res, rej) => { server.once('error', rej); server.listen(0, '127.0.0.1', res); });
+  const redirect = `http://localhost:${server.address().port}`;
+  try {
+    const q = new URLSearchParams({ client_id: clientId, response_type: 'code', redirect_uri: redirect, response_mode: 'query', scope: SCOPE, state, code_challenge: challenge, code_challenge_method: 'S256', prompt: 'select_account' });
+    openUrl(`${TENANT}/authorize?${q}`);
+    const code = await codePromise;
+    const r = await post(`${TENANT}/token`, { grant_type: 'authorization_code', client_id: clientId, code, redirect_uri: redirect, code_verifier: verifier, scope: SCOPE }, false);
+    if (!r.ok) throw new Error(`Connexion Microsoft impossible : ${r.data.error_description || r.data.error || r.status}`);
+    return r.data; // { access_token, refresh_token }
+  } finally { server.close(); }
+}
+
 async function refresh(clientId, refreshToken) {
   const r = await post(`${TENANT}/token`, { grant_type: 'refresh_token', client_id: clientId, refresh_token: refreshToken, scope: SCOPE }, false);
   if (!r.ok) throw new Error('Session Microsoft expirée, reconnecte-toi.');
@@ -80,4 +123,4 @@ async function minecraftFromMicrosoft(msAccessToken) {
   return { access_token: mc.data.access_token, uuid: p.id, name: p.name, expires: Date.now() + (mc.data.expires_in || 86400) * 1000 };
 }
 
-module.exports = { startDeviceCode, waitDeviceCode, refresh, minecraftFromMicrosoft };
+module.exports = { startDeviceCode, waitDeviceCode, browserLogin, refresh, minecraftFromMicrosoft };

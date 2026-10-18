@@ -4,7 +4,7 @@ const on = (ch, fn) => ipcRenderer.on(ch, (_e, d) => fn(d));
 contextBridge.exposeInMainWorld('eld', {
   state: () => ipcRenderer.invoke('state'),
   status: () => ipcRenderer.invoke('status'),
-  login: () => ipcRenderer.invoke('login'),
+  login: mode => ipcRenderer.invoke('login', mode),
   logout: () => ipcRenderer.invoke('logout'),
   play: () => ipcRenderer.invoke('play'),
   setRam: r => ipcRenderer.invoke('set-ram', r),

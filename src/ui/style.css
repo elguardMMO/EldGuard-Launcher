@@ -53,7 +53,10 @@ h1 { margin:6px 0 4px; font-size:30px; letter-spacing:12px; font-weight:600; col
 .device { margin-top:18px; }
 .code { font-size:46px; letter-spacing:10px; font-weight:800; color:var(--gold); margin:8px 0; font-family:Consolas,monospace; }
 
-.error { position:fixed; bottom:78px; left:50%; transform:translateX(-50%); width:620px; padding:12px 16px; background:rgba(110,26,34,.55); border:1px solid #b04050; color:#ffd8d0; font-size:13px; line-height:1.5; text-align:center; }
+.textlink { margin-top:14px; background:none; border:0; color:var(--dim); font:inherit; font-size:12px; letter-spacing:.5px; text-decoration:underline; cursor:pointer; }
+.textlink:hover:not(:disabled) { color:var(--txt); }
+.textlink:disabled { opacity:.4; cursor:default; }
+.error { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); width:620px; padding:12px 16px; background:rgba(110,26,34,.55); border:1px solid #b04050; color:#ffd8d0; font-size:13px; line-height:1.5; text-align:center; }
 
 .corner { position:fixed; right:24px; bottom:22px; }
 .srv { display:flex; align-items:center; gap:9px; padding:12px 16px; background:rgba(8,12,34,.6); border:1px solid var(--line); font-size:11px; letter-spacing:3px; color:var(--dim); }
