@@ -2,7 +2,7 @@
   "name": "EldGuard",
   "microsoftClientId": "7785ab18-8fa3-4d0e-9592-ced5a68b09dd",
   "minecraft": "1.20.1",
-  "forge": "1.20.1-47.3.0",
+  "forge": "1.20.1-47.4.26",
   "memory": { "min": "2G", "max": "4G" },
   "links": { "discord": "https://discord.gg/ye7p9rHaff" },
   "gateUrl": "https://eldguard-gate.eldguard-cb5.workers.dev",
