@@ -1,0 +1,31 @@
+{
+  "name": "eldguard-launcher",
+  "productName": "EldGuard Launcher",
+  "version": "0.1.0",
+  "description": "Lanceur du serveur EldGuard (Minecraft 1.20.1, Forge) : connexion Microsoft, installation et mises à jour automatiques.",
+  "main": "src/main.js",
+  "author": "EldGuard",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "manifest": "node tools/make_manifest.js",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "minecraft-launcher-core": "^3.18.2"
+  },
+  "devDependencies": {
+    "electron": "^41.7.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "fr.eldguard.launcher",
+    "productName": "EldGuard Launcher",
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "assets/**/*", "config.json", "package.json"],
+    "win": { "target": "nsis" },
+    "nsis": { "oneClick": true, "perMachine": false, "deleteAppDataOnUninstall": false }
+  }
+}

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: https://mc-heads.net">
+<title>EldGuard Launcher</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="bg"></div><div class="veil"></div><div class="stars"></div>
+
+<div class="titlebar">
+  <div class="brand"><img src="../../assets/emblem.png" alt=""><b>ELDGUARD</b><span>LAUNCHER</span></div>
+  <div class="wc"><button id="wMin" aria-label="Réduire">&#8211;</button><button id="wClose" aria-label="Fermer">&#10005;</button></div>
+</div>
+
+<main>
+  <!-- connexion -->
+  <section id="login" class="center hidden">
+    <img class="crest" src="../../assets/emblem.png" alt="">
+    <h1>BIENVENUE</h1>
+    <p class="sub">Connecte-toi avec ton compte Microsoft (celui de Minecraft Java Edition).<br>Ton mot de passe n'est jamais vu par le lanceur.</p>
+    <button id="btnLogin" class="play">SE CONNECTER AVEC MICROSOFT</button>
+    <div id="deviceBox" class="device hidden">
+      <div class="small">Une page Microsoft s'est ouverte. Saisis ce code :</div>
+      <div id="deviceCode" class="code">----</div>
+      <div class="small">Page : <span id="deviceUrl"></span></div>
+    </div>
+  </section>
+
+  <!-- accueil -->
+  <section id="home" class="center hidden">
+    <div class="avatarWrap">
+      <img id="avatar" class="avatar" alt="">
+      <button id="btnLogout" class="ico" title="Changer de compte">&#9211;</button>
+    </div>
+    <div id="pseudo" class="pseudo">Joueur</div>
+    <div id="ready" class="ready">Prêt à jouer</div>
+    <button id="btnPlay" class="play">JOUER</button>
+    <div id="progressWrap" class="progress hidden">
+      <div class="bar"><div id="bar"></div></div>
+      <div id="status" class="small">Préparation…</div>
+    </div>
+    <div class="row3">
+      <button id="btnDiscord" class="ghost">DISCORD</button>
+      <button id="btnFolder" class="ghost">DOSSIER DU JEU</button>
+      <button id="btnSettings" class="ghost">PARAMÈTRES</button>
+    </div>
+    <div class="meta"><span>VERSION</span> <b id="mcv">1.20.1</b> <i>/</i> <span>LAUNCHER</span> <b id="lv">0.1.0</b> <i>/</i> <span>COMPTE</span> <b id="acc">-</b></div>
+  </section>
+
+  <div id="error" class="error hidden"></div>
+</main>
+
+<div class="corner">
+  <div id="srv" class="srv"><i id="srvDot"></i><span id="srvTxt">SERVEUR</span></div>
+</div>
+
+<div id="settings" class="modal hidden">
+  <div class="panel">
+    <h3>Paramètres</h3>
+    <label>Mémoire allouée à Minecraft
+      <select id="ram"><option>2G</option><option>3G</option><option>4G</option><option>6G</option><option>8G</option><option>10G</option><option>12G</option></select>
+    </label>
+    <div class="small">4 Go convient à la plupart des ordinateurs ; ne dépasse pas la moitié de ta mémoire.</div>
+    <button id="btnCloseSettings" class="ghost wide">FERMER</button>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
